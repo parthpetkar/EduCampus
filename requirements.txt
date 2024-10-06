@@ -12,11 +12,7 @@ fastembed==0.2.4
 openai==1.3.6
 langchainhub==0.1.14
 matplotlib==3.9.2
-psycopg2-binary
-spacy
-tensorflow
+psycopg2-binary==2.9.9
+spacy==3.7.5
+tensorflow==2.17.0
 tf-keras==2.17.0
-fpdf
-requests 
-beautifulsoup4
-lxml
