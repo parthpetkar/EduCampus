@@ -1,9 +1,9 @@
-from qdrant_client import QdrantClient
-from qdrant_client.http.models import Distance, VectorParams
-from langchain_qdrant import QdrantVectorStore
-from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import FastEmbedEmbeddings
+from qdrant_client import QdrantClient # type: ignore
+from qdrant_client.http.models import Distance, VectorParams # type: ignore
+from langchain_qdrant import QdrantVectorStore # type: ignore
+from langchain_community.document_loaders import PyPDFLoader # type: ignore
+from langchain.text_splitter import RecursiveCharacterTextSplitter # type: ignore
+from langchain_community.embeddings import FastEmbedEmbeddings # type: ignore
 import os
 from config import config
 from concurrent.futures import ThreadPoolExecutor
@@ -78,13 +78,13 @@ def delete_old_chunks(client, pdf_file_name):
 @retry((Exception,), tries=3, delay=5, backoff=2)
 def process_pdf(pdf_file, client, embeddings, text_splitter):
     """
-    Processes a single PDF file, checks for updates, and ingests it into Qdrant.
+    Processes a single PDF file, checks if it's new or updated, and ingests it into Qdrant.
     """
     try:
         pdf_file_path = os.path.join('data', pdf_file)
         last_modified_time = get_pdf_last_modified_time(pdf_file_path)
         
-        # Check if the file is already ingested and up-to-date
+        # Search for existing chunks for this PDF
         existing_chunks = client.search(
             collection_name=config.COLLECTION_NAME,
             filter={
@@ -92,21 +92,27 @@ def process_pdf(pdf_file, client, embeddings, text_splitter):
                     {"key": "pdf_file_name", "match": {"value": pdf_file}},
                 ]
             },
-            limit=1
+            limit=1  # We only need to check if at least one chunk exists
         )
         
+        # Case 1: The PDF already exists and hasn't changed
         if existing_chunks:
-            # Check if the PDF has been updated
             existing_last_modified_time = existing_chunks[0].payload.get("last_modified_time")
             
             if existing_last_modified_time == last_modified_time:
                 print(f"No changes detected in {pdf_file}. Skipping ingestion.")
-                return
+                return  # Skip ingestion if no changes
+        
+        # Case 2: The PDF exists but has been modified
             else:
                 print(f"Detected changes in {pdf_file}. Updating chunks...")
                 delete_old_chunks(client, pdf_file)
 
-        # Load and process the PDF
+        # Case 3: The PDF is new and doesn't exist in Qdrant
+        else:
+            print(f"New PDF detected: {pdf_file}. Ingesting for the first time.")
+        
+        # Ingest new or updated chunks
         docs = PyPDFLoader(file_path=pdf_file_path).load()
         chunks = text_splitter.split_documents(docs)
 

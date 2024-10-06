@@ -1,7 +1,7 @@
-from langchain_groq import ChatGroq
-from langchain.prompts import PromptTemplate
-from langchain.schema.output_parser import StrOutputParser
-from langchain.schema.runnable import RunnablePassthrough
+from langchain_groq import ChatGroq # type: ignore
+from langchain.prompts import PromptTemplate# type: ignore
+from langchain.schema.output_parser import StrOutputParser# type: ignore
+from langchain.schema.runnable import RunnablePassthrough # type: ignore
 from config import config
 
 # Initialize Groq model with API key

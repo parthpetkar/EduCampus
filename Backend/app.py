@@ -1,9 +1,9 @@
-from flask import Flask, jsonify, request
-from api.retrieval import retrieval_blueprint
-from api.generation import generation_blueprint
+from flask import Flask, jsonify, request # type: ignore
+from api.retrieval import retrieval_blueprint # type: ignore
+from api.generation import generation_blueprint # type: ignore
 # from api.processing import process_query_with_ner  # Import the NER processing function
 from config import config
-from flask_cors import CORS
+from flask_cors import CORS # type: ignore
 
 app = Flask(__name__)
 app.config.from_object(config)
