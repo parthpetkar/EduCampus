@@ -1,0 +1,9 @@
+venv
+myenv
+.venv
+.env
+.env-local
+__pycache__
+/scrape/
+/data
+chromedriver-win64

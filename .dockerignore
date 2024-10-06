@@ -1,0 +1,5 @@
+/venv
+/data
+/scrape
+/__pycache__
+chromedriver-win64
