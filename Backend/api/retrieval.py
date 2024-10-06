@@ -10,7 +10,7 @@ qdrant_client = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KE
 embeddings = FastEmbedEmbeddings()
 vector_store = QdrantVectorStore(client=qdrant_client, collection_name=config.COLLECTION_NAME, embedding=embeddings)
 
-retriever = vector_store.as_retriever(search_type="similarity_score_threshold", search_kwargs={"k": 5, "score_threshold": 0.5})
+retriever = vector_store.as_retriever(search_type="similarity_score_threshold", search_kwargs={"k": 10, "score_threshold": 0.5})
 
 @retrieval_blueprint.route('/retrieve', methods=['POST'])
 def retrieve():

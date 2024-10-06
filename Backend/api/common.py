@@ -48,6 +48,7 @@ def get_prompt_template(use_case):
             3. Always base your responses on the provided documents. If the documents lack relevant information, politely inform the user that the information is not available at VIT Pune.
             4. Your response should be at least 20 words long.
             5. Highlight relevant VIT Pune departments, courses, or resources when applicable.
+            6. Provide appropriate link for the query provided by the user.
 
             Response format:
             Details: [Provide a friendly and helpful response based on the context.]

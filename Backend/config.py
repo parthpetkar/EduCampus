@@ -8,7 +8,7 @@ class Config:
     QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
     COLLECTION_NAME = "education"
     #MODEL_NAME = "mistral" #use this when using ollama
-    MODEL_NAME = "mixtral-8x7b-32768"  # Related to the retrieval part
+    MODEL_NAME = "llama-3.2-90b-text-preview"  # Related to the retrieval part
     DEBUG = os.getenv("DEBUG", "True").lower() in ['true', '1', 't']
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
