@@ -4,6 +4,4 @@ myenv
 .env
 .env-local
 __pycache__
-/scrape/
-/data
-chromedriver-win64
+/data/

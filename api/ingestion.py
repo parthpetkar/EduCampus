@@ -47,23 +47,84 @@ def retry(exceptions, tries=3, delay=2, backoff=2):
         return f_retry
     return deco_retry
 
+def get_pdf_last_modified_time(pdf_file_path):
+    """
+    Get the last modified time of the PDF file.
+    """
+    return os.path.getmtime(pdf_file_path)
+
+
+def delete_old_chunks(client, pdf_file_name):
+    """
+    Deletes old chunks from the Qdrant collection based on the PDF file name.
+    """
+    try:
+        client.delete(
+            collection_name=config.COLLECTION_NAME,
+            filter={
+                "must": [
+                    {
+                        "key": "pdf_file_name",
+                        "match": {"value": pdf_file_name}
+                    }
+                ]
+            }
+        )
+        print(f"Deleted old chunks for {pdf_file_name}")
+    except Exception as e:
+        print(f"Failed to delete old chunks for {pdf_file_name}: {e}")
+
+
 @retry((Exception,), tries=3, delay=5, backoff=2)
 def process_pdf(pdf_file, client, embeddings, text_splitter):
     """
-    Processes a single PDF file, splits it into chunks, and ingests it into Qdrant.
+    Processes a single PDF file, checks for updates, and ingests it into Qdrant.
     """
     try:
         pdf_file_path = os.path.join('data', pdf_file)
+        last_modified_time = get_pdf_last_modified_time(pdf_file_path)
+        
+        # Check if the file is already ingested and up-to-date
+        existing_chunks = client.search(
+            collection_name=config.COLLECTION_NAME,
+            filter={
+                "must": [
+                    {"key": "pdf_file_name", "match": {"value": pdf_file}},
+                ]
+            },
+            limit=1
+        )
+        
+        if existing_chunks:
+            # Check if the PDF has been updated
+            existing_last_modified_time = existing_chunks[0].payload.get("last_modified_time")
+            
+            if existing_last_modified_time == last_modified_time:
+                print(f"No changes detected in {pdf_file}. Skipping ingestion.")
+                return
+            else:
+                print(f"Detected changes in {pdf_file}. Updating chunks...")
+                delete_old_chunks(client, pdf_file)
+
+        # Load and process the PDF
         docs = PyPDFLoader(file_path=pdf_file_path).load()
         chunks = text_splitter.split_documents(docs)
 
+        # Add metadata (PDF file name and last modified time) to each chunk
+        for chunk in chunks:
+            chunk.metadata = {
+                "pdf_file_name": pdf_file,
+                "last_modified_time": last_modified_time
+            }
+
+        # Ingest new chunks with metadata into Qdrant
         vector_store = QdrantVectorStore.from_documents(
             documents=chunks,
             embedding=embeddings,
             collection_name=config.COLLECTION_NAME,
             url=config.QDRANT_URL,
             api_key=config.QDRANT_API_KEY,
-            force_recreate=True
+            force_recreate=False
         )
         print(f"Document {pdf_file} ingested successfully.")
     except Exception as e:
