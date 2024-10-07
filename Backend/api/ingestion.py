@@ -152,7 +152,7 @@ def ingest():
     client = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY, timeout=120)
     create_collection_if_not_exists(client)
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=200)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     embeddings = FastEmbedEmbeddings()
 
     pdf_files = [f for f in os.listdir(data_folder) if f.endswith(".pdf")]

@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
-from qdrant_client import QdrantClient
-from langchain_qdrant import QdrantVectorStore
-from langchain_community.embeddings import FastEmbedEmbeddings
+from qdrant_client import QdrantClient # type: ignore
+from langchain_qdrant import QdrantVectorStore # type: ignore
+from langchain_community.embeddings import FastEmbedEmbeddings # type: ignore
 from config import config
 
 retrieval_blueprint = Blueprint('retrieval', __name__)
