@@ -1,12 +1,8 @@
 <template>
   <div>
     <!-- Chatbot Toggle Button when chatbot is closed -->
-    <button
-      v-if="!isChatbotOpen"
-      class="chatbot-toggle-btn"
-      @click="toggleChatbot"
-    >
-      <i class="fas fa-comments"></i> <!-- Chat Icon -->
+    <button v-if="!isChatbotOpen" class="chatbot-toggle-btn" @click="toggleChatbot">
+      <i class="fas fa-comments"></i>
     </button>
 
     <!-- Chatbot Panel -->
@@ -14,22 +10,18 @@
       <div v-if="isChatbotOpen" :class="['chatbot-container', { 'expanded': isExpanded }]">
         <div class="chatbot-header">
           <img src="@/assets/image1.png" alt="Institution Logo" class="logo" />
-          <h3 class="chatbot-title">Healthcare Support</h3> 
+          <h3 class="chatbot-title">Institute Support</h3>
           <button class="expand-chatbot-btn" @click="toggleExpand">
-            <i :class="isExpanded ? 'fas fa-compress' : 'fas fa-expand'"></i> <!-- Expand/Compress Icon -->
+            <i :class="isExpanded ? 'fas fa-compress' : 'fas fa-expand'"></i>
           </button>
           <button class="close-chatbot-btn" @click="toggleChatbot">
-            <i class="fas fa-times"></i> <!-- Close Icon -->
+            <i class="fas fa-times"></i>
           </button>
         </div>
 
         <div class="chatbot-window" ref="chatWindow">
-          <div
-            v-for="(message, index) in messages"
-            :key="index"
-            :class="messageClass(message.type)"
-          >
-            <div class="message">{{ message.text }}</div>
+          <div v-for="(message, index) in messages" :key="index" :class="messageClass(message.type)">
+            <div class="message" v-html="message.text"></div>
           </div>
         </div>
 
@@ -56,12 +48,12 @@ import axios from "axios";
 export default {
   data() {
     return {
-      isChatbotOpen: false,  // Control whether the chatbot is open or closed
-      isExpanded: false,     // Control whether the chatbot window is expanded
+      isChatbotOpen: false,
+      isExpanded: false,
       userInput: "",
       messages: [
         {
-          text: "Welcome to Healthcare Support. How can we assist you today?",
+          text: "Welcome to VIT Pune! How may I assist you today?",
           type: "bot",
         },
       ],
@@ -76,7 +68,6 @@ export default {
     },
     async sendMessage() {
       if (this.userInput.trim() !== "") {
-        // Add user message
         this.messages.push({ text: this.userInput, type: "user" });
         const inputText = this.userInput;
         this.userInput = "";
@@ -87,7 +78,6 @@ export default {
         });
 
         try {
-          // Send query to backend API
           const response = await axios.post("http://localhost:5000/api/query", {
             query: inputText,
           });
@@ -95,7 +85,6 @@ export default {
           const botResponse = response.data.response;
           const formattedResponse = this.formatBotResponse(botResponse);
 
-          // Add formatted bot response
           this.messages.push({ text: formattedResponse, type: "bot" });
 
           this.$nextTick(() => {
@@ -116,14 +105,22 @@ export default {
     },
     formatBotResponse(botResponse) {
       const pattern = /"answer":\s*"(.*?)"/s;
-
-      // Search for the answer
       const match = pattern.exec(botResponse);
       if (match) {
         let formattedText = match[1];
-        
-        // Replace escape sequences with normal text
-        formattedText = formattedText.replace(/\\n/g, '\n').replace(/\\"/g, '"');
+        formattedText = formattedText.replace(/\\n/g, "\n").replace(/\\"/g, '"');
+        formattedText = formattedText.replace(/^Details:\s*/, "");
+
+        formattedText = formattedText
+          .replace(/\b(?:https?|ftp):\/\/[^\s/$.?#].[^\s]*\b/g, (url) => {
+            return `<a href="${url}" target="_blank" class="hyperlink">${url}</a>`;
+          })
+          .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, (email) => {
+            return `<span class="highlight">${email}</span>`;
+          })
+          .replace(/\b\d{2,3}\s?[-]?\s?\d{4}\s?[-]?\s?\d{4,5}\b/g, (phone) => {
+            return `<span class="highlight">${phone}</span>`;
+          });
         return formattedText;
       }
     },
@@ -140,13 +137,13 @@ export default {
   bottom: 20px;
   right: 20px;
   background-color: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   font-family: "Roboto", sans-serif;
   z-index: 1000;
-  transition: all 0.3s ease;
+  transition: all 0.3s ease-in-out;
 }
 
 /* Expanded Chatbot Container */
@@ -155,7 +152,7 @@ export default {
   height: 600px;
 }
 
-/* Chatbot Toggle Button when closed */
+/* Chatbot Toggle Button */
 .chatbot-toggle-btn {
   position: fixed;
   bottom: 20px;
@@ -165,7 +162,7 @@ export default {
   border: none;
   padding: 18px;
   border-radius: 50%;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   z-index: 1100;
   transition: background-color 0.3s ease, transform 0.2s ease;
@@ -185,57 +182,44 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px;
-  background-color: #ffffff;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
-  color: #ffffff;
+  padding: 12px;
+  background-color: #f7f9fc;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  border-bottom: 1px solid #e6e6e6;
 }
 
 .logo {
-  width: 35px;
+  width: 40px;
   margin-right: 10px;
 }
 
 .chatbot-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
   margin: 0;
-  color: black;
-}
-
-/* Expand/Compress Button */
-.expand-chatbot-btn {
-  background-color: transparent;
-  border: none;
   color: #333;
-  font-size: 16px;
-  cursor: pointer;
-  margin-right: 10px;
 }
 
-.expand-chatbot-btn i {
-  font-size: 16px;
-}
-
-/* Close Button */
+.expand-chatbot-btn,
 .close-chatbot-btn {
   background-color: transparent;
   border: none;
-  color: #333;
+  color: #555;
   font-size: 18px;
   cursor: pointer;
 }
 
+.expand-chatbot-btn i,
 .close-chatbot-btn i {
   font-size: 18px;
 }
 
 /* Chat Window */
 .chatbot-window {
-  height: 350px;
-  overflow-y: auto;
+  flex: 1;
   padding: 15px;
+  overflow-y: auto;
   background-color: #f4f7f9;
 }
 
@@ -244,37 +228,40 @@ export default {
 }
 
 .message {
-  padding: 10px;
-  border-radius: 15px;
-  max-width: 75%;
-  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  max-width: 100%;
   word-wrap: break-word;
   font-size: 14px;
 }
 
 .bot-message {
-  background-color: #f0f0f0;
-  color: #333333;
+  background-color: #e6e6e6;
+  color: #333;
   align-self: flex-start;
+  text-align: left;
 }
 
 .user-message {
   background-color: #004f9e;
   color: #ffffff;
-  align-self: flex-end;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  align-self: flex-start;
+  text-align: right;
 }
 
 /* Input Area */
 .chatbot-input-area {
   display: flex;
-  padding: 15px;
-  border-top: 1px solid #eeeeee;
+  padding: 12px 15px;
   background-color: #ffffff;
+  border-top: 1px solid #e6e6e6;
 }
 
 .input-field {
   flex: 1;
-  padding: 10px;
+  padding: 10px 12px;
   font-size: 14px;
   border: 1px solid #cccccc;
   border-radius: 25px;
@@ -289,11 +276,11 @@ export default {
 .send-btn {
   background-color: #004f9e;
   border: none;
-  color: #ffffff;
+  color: white;
   padding: 10px 15px;
   border-radius: 25px;
-  cursor: pointer;
   margin-left: 10px;
+  cursor: pointer;
   display: flex;
   align-items: center;
 }
@@ -303,16 +290,31 @@ export default {
 }
 
 .send-btn:hover {
-  background-color: white;
+  background-color: #003d7b;
 }
 
+/* Slide transition */
 .slide-enter-active,
 .slide-leave-active {
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease-in-out;
 }
 
 .slide-enter,
 .slide-leave-to {
-  transform: translateX(100%);
+  transform: translateY(100%);
+}
+
+/* Hyperlink styling */
+.hyperlink {
+  color: #004f9e;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Highlight class for emails and phone numbers */
+.highlight {
+  background-color: #ffe200;
+  padding: 1px 4px;
+  border-radius: 3px;
 }
 </style>
