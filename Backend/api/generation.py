@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request # type: ignore
 from api.common import format_docs, run_chain, get_prompt_template
 from api.retrieval import retriever
 

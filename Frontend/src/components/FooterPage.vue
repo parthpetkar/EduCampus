@@ -1,6 +1,6 @@
 <template>
     <footer class="footer">
-      <p>&copy; 2024 Institute Name. All Rights Reserved.</p>
+      <p>&copy; 2024 Vishwakarma Institute of Technology. All Rights Reserved.</p>
     </footer>
   </template>
   
