@@ -23,6 +23,10 @@
           <button class="expand-chatbot-btn" @click="toggleExpand">
             <i :class="isExpanded ? 'fas fa-compress' : 'fas fa-expand'"></i>
           </button>
+          <button @click="toggleNarration" class="toggle-narration-btn">
+            <i :class="isNarrationEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute'"></i>
+          </button>
+
           <button class="close-chatbot-btn" @click="toggleChatbot">
             <i class="fas fa-times"></i>
           </button>
@@ -98,6 +102,7 @@ export default {
       isRecording: false, // Track recording state
       recognition: null, // Speech recognition instance
       audioChunks: [], // Store audio chunks
+      isNarrationEnabled: true, // Default narration state
     };
   },
 
@@ -154,6 +159,8 @@ export default {
       }
     },
 
+
+
     async startVoiceRecognition() {
       if (!("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
         alert("Voice recognition is not supported in your browser.");
@@ -180,35 +187,79 @@ export default {
 
       this.recognition.start();
     },
+    // async sendMessage() {
+    //   if (this.userInput.trim() !== "" || this.file) {
+    //     const formData = new FormData();
+    //     formData.append("query", this.userInput.trim());
+    //     if (this.file) formData.append("file", this.file);
+
+    //     this.messages.push({ text: this.userInput, type: "user" });
+    //     this.userInput = "";
+
+    //     try {
+    //       const response = await axios.post("http://localhost:5000/api/query", formData, {
+    //         headers: { "Content-Type": "multipart/form-data" },
+    //       });
+
+    //       const botResponse = this.formatBotResponse(response.data.response);
+    //       this.messages.push({ text: botResponse, type: "bot" });
+    //     } catch (error) {
+    //       console.error("Error sending message:", error);
+    //       this.messages.push({ text: "Sorry, an error occurred.", type: "bot" });
+    //     }
+    //   }
+    // },
+
     async sendMessage() {
-      if (this.userInput.trim() !== "" || this.file) {
-        const formData = new FormData();
-        formData.append("query", this.userInput.trim());
-        if (this.file) formData.append("file", this.file);
+    if (this.userInput.trim() !== "" || this.file) {
+      const formData = new FormData();
+      formData.append("query", this.userInput.trim());
+      if (this.file) formData.append("file", this.file);
 
-        this.messages.push({ text: this.userInput, type: "user" });
-        this.userInput = "";
+      this.messages.push({ text: this.userInput, type: "user" });
+      this.userInput = "";
 
-        try {
-          const response = await axios.post("http://localhost:5000/api/query", formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
+      try {
+        const response = await axios.post("http://localhost:5000/api/query", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
 
-          const botResponse = this.formatBotResponse(response.data.response);
-          this.messages.push({ text: botResponse, type: "bot" });
-        } catch (error) {
-          console.error("Error sending message:", error);
-          this.messages.push({ text: "Sorry, an error occurred.", type: "bot" });
+        const botResponse = this.formatBotResponse(response.data.response);
+        this.messages.push({ text: botResponse, type: "bot" });
+
+        // Narrate the bot's response
+        // this.narrateText(botResponse);
+        if (this.isNarrationEnabled) {
+          this.narrateText(botResponse);
         }
+
+      } catch (error) {
+        console.error("Error sending message:", error);
+        const errorMessage = "Sorry, an error occurred.";
+        this.messages.push({ text: errorMessage, type: "bot" });
+
+        // Narrate the error message
+        this.narrateText(errorMessage);
       }
-    },
+    }
+  },
+
+  toggleNarration() {
+    this.isNarrationEnabled = !this.isNarrationEnabled;
+
+    // Stop any ongoing narration immediately
+    if (!this.isNarrationEnabled) {
+      window.speechSynthesis.cancel();
+    }
+  },
+
 
     messageClass(type) {
       return type === "user" ? "user-message" : "bot-message";
     },
 
     formatBotResponse(botResponse) {
-      const pattern = /"answer":\s*"(.*?)"/s;
+      const pattern = /"response":\s*"(.*?)"/s;
       const match = pattern.exec(botResponse);
       if (match) {
         let formattedText = match[1];
@@ -228,6 +279,25 @@ export default {
       }
       return botResponse;
     },
+
+    narrateText(text) {
+    if (!("speechSynthesis" in window)) {
+      console.warn("Speech synthesis not supported in this browser.");
+      return;
+    }
+
+    // Cancel any ongoing narration
+    window.speechSynthesis.cancel();
+
+    if (this.isNarrationEnabled) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-US"; // Set language
+      utterance.rate = 1;       // Adjust speed (1 is normal speed)
+      utterance.pitch = 1;      // Adjust pitch (1 is normal pitch)
+
+      window.speechSynthesis.speak(utterance);
+    }
+  },
   },
 };
 </script>
@@ -470,5 +540,18 @@ export default {
   display: block;
 }
 /* Additions to the existing CSS */
+
+.toggle-narration-btn {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 18px;
+  margin-left: 8px;
+}
+.toggle-narration-btn:hover {
+  color: #ffffff;
+}
+
 
 </style>
