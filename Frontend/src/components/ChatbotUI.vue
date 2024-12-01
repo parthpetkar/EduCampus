@@ -396,7 +396,7 @@ export default {
   background-color: white;
 }
 
-.audio-btn {
+.mic-btn{
   background-color: #004f9e;
   border: none;
   border-radius: 50%;
@@ -449,8 +449,5 @@ export default {
   display: block;
 }
 /* Additions to the existing CSS */
-
-
-
 
 </style>
