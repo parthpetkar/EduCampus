@@ -180,7 +180,6 @@ export default {
 
       this.recognition.start();
     },
-
     async sendMessage() {
       if (this.userInput.trim() !== "" || this.file) {
         const formData = new FormData();
