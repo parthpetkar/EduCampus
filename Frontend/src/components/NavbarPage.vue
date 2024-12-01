@@ -25,7 +25,7 @@
     
   }
   .navbar {
-    background-color: white; /* Primary blue color */
+    background-color: #EBF9FF; /* Primary blue color */
     color: black;
     padding: 1rem;
     display: flex;
@@ -55,14 +55,15 @@
   }
   
   .navbar a {
-    color: goldenrod;
+    color: black;
+    font-weight: bold;
     text-decoration: none;
     /* font-weight: bold; */
   }
   
   .navbar a:hover {
     text-decoration: underline;
-    color: black;
+    color: #00b2ff;
   }
   </style>
   
