@@ -194,7 +194,8 @@ export default {
             headers: { "Content-Type": "multipart/form-data" },
           });
 
-          this.messages.push({ text: response.data.response, type: "bot" });
+          const botResponse = this.formatBotResponse(response.data.response);
+          this.messages.push({ text: botResponse, type: "bot" });
         } catch (error) {
           console.error("Error sending message:", error);
           this.messages.push({ text: "Sorry, an error occurred.", type: "bot" });
@@ -204,6 +205,28 @@ export default {
 
     messageClass(type) {
       return type === "user" ? "user-message" : "bot-message";
+    },
+
+    formatBotResponse(botResponse) {
+      const pattern = /"answer":\s*"(.*?)"/s;
+      const match = pattern.exec(botResponse);
+      if (match) {
+        let formattedText = match[1];
+        formattedText = formattedText.replace(/\\n/g, "\n").replace(/\\"/g, '"');
+        formattedText = formattedText.replace(/^Details:\s*/, "");
+        formattedText = formattedText
+          .replace(/\b(?:https?|ftp):\/\/[^\s/$.?#].[^\s]*\b/g, (url) => {
+            return `<button class="text-button" onclick="window.open('${url}', '_blank')">${url}</button>`;
+          })
+          .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, (email) => {
+            return `<span class="highlight">${email}</span>`;
+          })
+          .replace(/\b\d{2,3}\s?[-]?\s?\d{4}\s?[-]?\s?\d{4,5}\b/g, (phone) => {
+            return `<span class="highlight">${phone}</span>`;
+          });
+        return formattedText;
+      }
+      return botResponse;
     },
   },
 };
