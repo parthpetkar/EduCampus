@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request # type: ignore
 from api.retrieval import retrieval_blueprint
 from api.generation import generation_blueprint
 from api.chat_with_pdf import chat_blueprint
+from api.audio_conversion import audio_blueprint
 from config import config
 from flask_cors import CORS # type: ignore
 from werkzeug.utils import secure_filename # type: ignore
@@ -17,6 +18,10 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
 app.register_blueprint(retrieval_blueprint, url_prefix="/api/retrieval")
 app.register_blueprint(generation_blueprint, url_prefix="/api/generation")
 app.register_blueprint(chat_blueprint, url_prefix="/api/chat_with_pdf")
+app.register_blueprint(audio_blueprint, url_prefix="/api/audio_conversion")
+
+UPLOAD_FOLDER = './uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route('/api/query', methods=['POST'])
 def query():
@@ -25,38 +30,55 @@ def query():
     """
     query = request.form.get("query", "")
     uploaded_file = request.files.get("file")
-    print(request.files)  # This should display all uploaded files
 
     if not query:
         return jsonify({"error": "No query provided."}), 400
 
-    file_path = None
-    if uploaded_file :
+    if uploaded_file:
         # Save the uploaded file
         filename = secure_filename(uploaded_file.filename)
-        upload_dir = './uploads'
-        os.makedirs(upload_dir, exist_ok=True)  # Ensure the upload directory exists
-        
-        # Use os.path.join to construct the full file path
-        file_path = os.path.join(upload_dir, filename).replace("\\", "/")
-
-        # Save the uploaded file
+        file_path = os.path.join(UPLOAD_FOLDER, filename).replace("\\", "/")
         uploaded_file.save(file_path)
+
         # Call the chat_with_pdf endpoint
         response = app.test_client().post(
             '/api/chat_with_pdf/generate',
             json={"file": file_path, "query": query}
         ).get_data(as_text=True)
-        print(response)
         return jsonify({"response": response}), 200
-    else:
-        # Call the text generation endpoint if no file is uploaded
-        response = app.test_client().post(
-            '/api/generation/generate',
-            json={"query": query}
-        ).get_data(as_text=True)
-        print(response)
-        return jsonify({"response": response}), 200
+
+    # Call the text generation endpoint if no file is uploaded
+    response = app.test_client().post(
+        '/api/generation/generate',
+        json={"query": query}
+    ).get_data(as_text=True)
+    return jsonify({"response": response}), 200
+
+
+@app.route('/api/upload_audio', methods=['POST'])
+def audio():
+    """
+    Route to handle audio file uploads and invoke the audio conversion endpoint.
+    """
+    if 'audio' not in request.files:
+        return jsonify({"error": "No audio file provided."}), 400
+
+    audio_file = request.files['audio']
+    if not audio_file.filename:
+        return jsonify({"error": "Empty file uploaded."}), 400
+
+    # Save the audio file securely
+    filename = secure_filename(audio_file.filename)
+    file_path = os.path.join(UPLOAD_FOLDER, filename).replace("\\", "/")
+    audio_file.save(file_path)
+
+    # Call the audio conversion endpoint
+    response = app.test_client().post(
+        '/api/audio_conversion/convert',
+        json={"file": file_path}
+    ).get_data(as_text=True)
+    return jsonify({"response": response}), 200
+
 
 if __name__ == "__main__":
     app.run(debug=config.DEBUG)
