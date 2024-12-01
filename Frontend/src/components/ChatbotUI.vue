@@ -16,6 +16,7 @@
         @mouseleave="stopDrag"
         :style="{ top: `${position.y}px`, left: `${position.x}px` }"
       >
+        <!-- Header Section -->
         <div class="chatbot-header">
           <img src="@/assets/image1.png" alt="Institution Logo" class="logo" />
           <h3 class="chatbot-title">Institute Support</h3>
@@ -27,20 +28,34 @@
           </button>
         </div>
 
+        <!-- Chat Window Section -->
         <div class="chatbot-window" ref="chatWindow">
-          <div v-for="(message, index) in messages" :key="index" :class="messageClass(message.type)">
+          <div
+            v-for="(message, index) in messages"
+            :key="index"
+            :class="messageClass(message.type)"
+          >
             <div class="message" v-html="message.text"></div>
           </div>
         </div>
 
+        <!-- Input Area Section -->
         <div class="chatbot-input-area">
+          <!-- File Upload -->
           <div class="file-upload-wrapper">
             <label class="file-upload-icon">
               <input type="file" name="file" @change="handleFileUpload" hidden />
               <i class="fas fa-paperclip"></i>
             </label>
-            <span v-if="fileName" class="file-name-preview">{{ fileName }}</span>
+            <span v-if="fileName" class="file-name-preview">
+              {{ fileName }}
+              <button class="delete-file-btn" @click="deleteFile">
+                <i class="fas fa-times-circle"></i>
+              </button>
+            </span>
           </div>
+
+          <!-- Text Input -->
           <input
             type="text"
             v-model="userInput"
@@ -48,6 +63,8 @@
             placeholder="Type your question here..."
             class="input-field"
           />
+
+          <!-- Send Button -->
           <button @click="sendMessage" class="send-btn">
             <i class="fas fa-paper-plane"></i>
           </button>
@@ -56,7 +73,6 @@
     </transition>
   </div>
 </template>
-
 <script>
 import axios from "axios";
 
@@ -106,14 +122,20 @@ export default {
         this.fileName = uploadedFile.name;
       }
     },
+    deleteFile() {
+      this.file = null;
+      this.fileName = null;
+    },
     async sendMessage() {
       if (this.userInput.trim() !== "" || this.file) {
         const formData = new FormData();
         formData.append("query", this.userInput.trim());
-        formData.append("file", this.file || null); // Attach file or set null
+        formData.append("file", this.file || null);
 
         this.messages.push({ text: this.userInput, type: "user" });
         this.userInput = "";
+        this.file = null; // Reset file input
+        this.fileName = null; // Reset file name
 
         this.$nextTick(() => {
           const chatWindow = this.$refs.chatWindow;
@@ -126,7 +148,6 @@ export default {
           });
 
           const botResponse = this.formatBotResponse(response.data.response);
-          console.log(botResponse)
           this.messages.push({ text: botResponse, type: "bot" });
 
           this.$nextTick(() => {
@@ -146,7 +167,7 @@ export default {
       return type === "user" ? "user-message" : "bot-message";
     },
     formatBotResponse(botResponse) {
-      const pattern = /"response":\s*"(.*?)"/s;
+      const pattern = /"answer":\s*"(.*?)"/s;
       const match = pattern.exec(botResponse);
       if (match) {
         let formattedText = match[1];
@@ -154,7 +175,7 @@ export default {
         formattedText = formattedText.replace(/^Details:\s*/, "");
         formattedText = formattedText
           .replace(/\b(?:https?|ftp):\/\/[^\s/$.?#].[^\s]*\b/g, (url) => {
-            return `<button class="url-button" href="${url}" target="_blank" class="hyperlink">${url}</button>`;
+            return `<button class="text-button" onclick="window.open('${url}', '_blank')">${url}</button>`;
           })
           .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, (email) => {
             return `<span class="highlight">${email}</span>`;
@@ -164,12 +185,12 @@ export default {
           });
         return formattedText;
       }
+      return botResponse;
     },
   },
 };
 </script>
-
-<style scoped>
+<style>
 /* Draggable container */
 .chatbot-container {
   position: absolute;
@@ -283,15 +304,6 @@ export default {
   align-self: flex-end;
 }
 
-.hyperlink {
-  color: #007bff;
-  text-decoration: underline;
-}
-
-.highlight {
-  background-color: #ffd700;
-}
-
 /* Input area styling */
 .chatbot-input-area {
   display: flex;
@@ -343,26 +355,16 @@ export default {
   color: #888;
 }
 
-.url-button {
-  background-color: #004f9e;
-  color: white;
+.delete-file-btn {
+  background: none;
   border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
+  color: #ff5c5c;
   cursor: pointer;
-  font-size: 14px;
-  text-align: center;
-  margin-top: 5px;
-  display: inline-block;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-left: 5px;
 }
 
-.url-button:hover {
-  background-color: #003d7b;
-  transform: scale(1.05);
+.delete-file-btn:hover {
+  color: #d93838;
 }
 
-.url-button:active {
-  transform: scale(1);
-}
 </style>
