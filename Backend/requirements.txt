@@ -4,7 +4,7 @@ torch==2.3.1
 pypdf==4.3.1
 python-dotenv==1.0.1
 qdrant-client==1.11.1
-langchain-community==0.2.11
+langchain-community==0.2.19
 langchain-groq==0.1.9
 Flask==3.0.3
 langchain_qdrant==0.1.3
