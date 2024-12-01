@@ -83,6 +83,7 @@ export default {
           });
 
           const botResponse = response.data.response;
+          console.log(botResponse)
           const formattedResponse = this.formatBotResponse(botResponse);
 
           this.messages.push({ text: formattedResponse, type: "bot" });

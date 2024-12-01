@@ -8,7 +8,7 @@ class Config:
     QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
     COLLECTION_NAME = "chatbot"
     #MODEL_NAME = "mistral" #use this when using ollama
-    MODEL_NAME = "llama-3.2-90b-text-preview"  # Related to the retrieval part
+    MODEL_NAME = "llama-3.1-70b-versatile"  # Related to the retrieval part
     DEBUG = os.getenv("DEBUG", "True").lower() in ['true', '1', 't']
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
