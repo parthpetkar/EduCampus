@@ -188,8 +188,6 @@ export default {
 
         this.messages.push({ text: this.userInput, type: "user" });
         this.userInput = "";
-        this.file = null;
-        this.fileName = null;
 
         try {
           const response = await axios.post("http://localhost:5000/api/query", formData, {
