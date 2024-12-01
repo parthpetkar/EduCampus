@@ -190,7 +190,7 @@ export default {
     formData.append("audio", this.audioBlob, "recording.mp3");
 
     try {
-      const response = await axios.post("http://localhost:5000/api/upload-audio", formData, {
+      const response = await axios.post("http://localhost:5000/api/upload_audio", formData, {
         headers: {
           "Content-Type": "multipart/form-data"
         }
