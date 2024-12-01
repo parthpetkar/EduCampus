@@ -7,7 +7,15 @@
 
     <!-- Chatbot Panel -->
     <transition name="slide">
-      <div v-if="isChatbotOpen" :class="['chatbot-container', { 'expanded': isExpanded }]">
+      <div
+        v-if="isChatbotOpen"
+        :class="['chatbot-container', { expanded: isExpanded }]"
+        @mousedown="startDrag"
+        @mousemove="onDrag"
+        @mouseup="stopDrag"
+        @mouseleave="stopDrag"
+        :style="{ top: `${position.y}px`, left: `${position.x}px` }"
+      >
         <div class="chatbot-header">
           <img src="@/assets/image1.png" alt="Institution Logo" class="logo" />
           <h3 class="chatbot-title">Institute Support</h3>
@@ -26,6 +34,13 @@
         </div>
 
         <div class="chatbot-input-area">
+          <div class="file-upload-wrapper">
+            <label class="file-upload-icon">
+              <input type="file" name="file" @change="handleFileUpload" hidden />
+              <i class="fas fa-paperclip"></i>
+            </label>
+            <span v-if="fileName" class="file-name-preview">{{ fileName }}</span>
+          </div>
           <input
             type="text"
             v-model="userInput"
@@ -51,12 +66,14 @@ export default {
       isChatbotOpen: false,
       isExpanded: false,
       userInput: "",
+      file: null,
+      fileName: null,
       messages: [
-        {
-          text: "Welcome to VIT Pune! How may I assist you today?",
-          type: "bot",
-        },
+        { text: "Welcome to Institute Support! How can I assist you?", type: "bot" },
       ],
+      position: { x: 20, y: 20 }, // Initial draggable position
+      dragging: false,
+      dragStart: { x: 0, y: 0 },
     };
   },
   methods: {
@@ -66,10 +83,36 @@ export default {
     toggleExpand() {
       this.isExpanded = !this.isExpanded;
     },
+    startDrag(event) {
+      this.dragging = true;
+      this.dragStart = {
+        x: event.clientX - this.position.x,
+        y: event.clientY - this.position.y,
+      };
+    },
+    onDrag(event) {
+      if (this.dragging) {
+        this.position.x = event.clientX - this.dragStart.x;
+        this.position.y = event.clientY - this.dragStart.y;
+      }
+    },
+    stopDrag() {
+      this.dragging = false;
+    },
+    handleFileUpload(event) {
+      const uploadedFile = event.target.files[0];
+      if (uploadedFile) {
+        this.file = uploadedFile;
+        this.fileName = uploadedFile.name;
+      }
+    },
     async sendMessage() {
-      if (this.userInput.trim() !== "") {
+      if (this.userInput.trim() !== "" || this.file) {
+        const formData = new FormData();
+        formData.append("query", this.userInput.trim());
+        formData.append("file", this.file || null); // Attach file or set null
+
         this.messages.push({ text: this.userInput, type: "user" });
-        const inputText = this.userInput;
         this.userInput = "";
 
         this.$nextTick(() => {
@@ -78,15 +121,13 @@ export default {
         });
 
         try {
-          const response = await axios.post("http://localhost:5000/api/query", {
-            query: inputText,
+          const response = await axios.post("http://localhost:5000/api/query", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
           });
 
-          const botResponse = response.data.response;
+          const botResponse = this.formatBotResponse(response.data.response);
           console.log(botResponse)
-          const formattedResponse = this.formatBotResponse(botResponse);
-
-          this.messages.push({ text: formattedResponse, type: "bot" });
+          this.messages.push({ text: botResponse, type: "bot" });
 
           this.$nextTick(() => {
             const chatWindow = this.$refs.chatWindow;
@@ -105,16 +146,15 @@ export default {
       return type === "user" ? "user-message" : "bot-message";
     },
     formatBotResponse(botResponse) {
-      const pattern = /"answer":\s*"(.*?)"/s;
+      const pattern = /"response":\s*"(.*?)"/s;
       const match = pattern.exec(botResponse);
       if (match) {
         let formattedText = match[1];
         formattedText = formattedText.replace(/\\n/g, "\n").replace(/\\"/g, '"');
         formattedText = formattedText.replace(/^Details:\s*/, "");
-
         formattedText = formattedText
           .replace(/\b(?:https?|ftp):\/\/[^\s/$.?#].[^\s]*\b/g, (url) => {
-            return `<a href="${url}" target="_blank" class="hyperlink">${url}</a>`;
+            return `<button class="url-button" href="${url}" target="_blank" class="hyperlink">${url}</button>`;
           })
           .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, (email) => {
             return `<span class="highlight">${email}</span>`;
@@ -130,30 +170,32 @@ export default {
 </script>
 
 <style scoped>
-/* Main container */
+/* Draggable container */
 .chatbot-container {
+  position: absolute;
   width: 350px;
   height: 500px;
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
   background-color: #ffffff;
   border-radius: 12px;
   box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   font-family: "Roboto", sans-serif;
-  z-index: 1000;
-  transition: all 0.3s ease-in-out;
+  cursor: grab;
+  z-index: 1200;
 }
 
-/* Expanded Chatbot Container */
+.chatbot-container:active {
+  cursor: grabbing;
+}
+
 .expanded {
-  width: 700px;
-  height: 600px;
+  width: 600px;
+  height: 650px;
 }
 
-/* Chatbot Toggle Button */
+/* Toggle button styling */
 .chatbot-toggle-btn {
   position: fixed;
   bottom: 20px;
@@ -161,132 +203,120 @@ export default {
   background-color: #004f9e;
   color: white;
   border: none;
-  padding: 18px;
+  padding: 15px;
   border-radius: 50%;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   z-index: 1100;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  transition: background-color 0.3s ease;
 }
 
 .chatbot-toggle-btn:hover {
   background-color: #003d7b;
-  transform: scale(1.1);
 }
 
-.chatbot-toggle-btn i {
-  font-size: 22px;
-}
-
-/* Header */
+/* Header styling */
 .chatbot-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  background-color: #f7f9fc;
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
-  border-bottom: 1px solid #e6e6e6;
+  justify-content: space-between;
+  padding: 10px 15px;
+  background-color: #004f9e;
+  color: white;
 }
 
-.logo {
-  width: 40px;
-  margin-right: 10px;
+.chatbot-header .logo {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
 }
 
-.chatbot-title {
-  font-size: 18px;
+.chatbot-header .chatbot-title {
+  flex: 1;
+  font-size: 16px;
+  margin-left: 10px;
   font-weight: bold;
-  margin: 0;
-  color: #333;
+  color: #ffffff;
 }
 
 .expand-chatbot-btn,
 .close-chatbot-btn {
-  background-color: transparent;
+  background: none;
   border: none;
-  color: #555;
-  font-size: 18px;
+  color: white;
+  font-size: 16px;
   cursor: pointer;
+  margin-left: 5px;
 }
 
-.expand-chatbot-btn i,
-.close-chatbot-btn i {
-  font-size: 18px;
+.expand-chatbot-btn:hover,
+.close-chatbot-btn:hover {
+  color: #00b2ff;
 }
 
-/* Chat Window */
+/* Chat window styling */
 .chatbot-window {
   flex: 1;
-  padding: 15px;
+  padding: 10px;
   overflow-y: auto;
   background-color: #f4f7f9;
 }
 
-.expanded .chatbot-window {
-  height: 550px;
-}
-
 .message {
-  padding: 10px 12px;
-  border-radius: 16px;
-  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  max-width: 80%;
   word-wrap: break-word;
-  font-size: 14px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .bot-message {
-  background-color: #e6e6e6;
+  background-color: #ebf9ff;
   color: #333;
   align-self: flex-start;
-  text-align: left;
 }
 
 .user-message {
-  background-color: #004f9e;
-  color: #ffffff;
-  margin-top: 10px;
-  margin-bottom: 10px;
-  align-self: flex-start;
-  text-align: right;
+  background-color: #cce5ff;
+  color: #333;
+  align-self: flex-end;
 }
 
-/* Input Area */
+.hyperlink {
+  color: #007bff;
+  text-decoration: underline;
+}
+
+.highlight {
+  background-color: #ffd700;
+}
+
+/* Input area styling */
 .chatbot-input-area {
   display: flex;
-  padding: 12px 15px;
+  align-items: center;
+  padding: 10px;
+  border-top: 1px solid #ddd;
   background-color: #ffffff;
-  border-top: 1px solid #e6e6e6;
 }
 
 .input-field {
-  flex: 1;
-  padding: 10px 12px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  margin-right: 10px;
   font-size: 14px;
-  border: 1px solid #cccccc;
-  border-radius: 25px;
-  outline: none;
-  transition: border-color 0.3s ease;
-}
-
-.input-field:focus {
-  border-color: #004f9e;
 }
 
 .send-btn {
   background-color: #004f9e;
   border: none;
+  padding: 10px;
+  border-radius: 50%;
   color: white;
-  padding: 10px 15px;
-  border-radius: 25px;
-  margin-left: 10px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-}
-
-.send-btn i {
   font-size: 16px;
 }
 
@@ -294,28 +324,45 @@ export default {
   background-color: #003d7b;
 }
 
-/* Slide transition */
-.slide-enter-active,
-.slide-leave-active {
-  transition: transform 0.3s ease-in-out;
+/* File Upload */
+.file-upload-wrapper {
+  display: flex;
+  align-items: center;
+  margin-right: 10px;
 }
 
-.slide-enter,
-.slide-leave-to {
-  transform: translateY(100%);
-}
-
-/* Hyperlink styling */
-.hyperlink {
+.file-upload-icon {
+  font-size: 20px;
   color: #004f9e;
-  text-decoration: underline;
   cursor: pointer;
 }
 
-/* Highlight class for emails and phone numbers */
-.highlight {
-  background-color: #ffe200;
-  padding: 1px 4px;
-  border-radius: 3px;
+.file-name-preview {
+  font-size: 12px;
+  margin-left: 10px;
+  color: #888;
+}
+
+.url-button {
+  background-color: #004f9e;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: center;
+  margin-top: 5px;
+  display: inline-block;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.url-button:hover {
+  background-color: #003d7b;
+  transform: scale(1.05);
+}
+
+.url-button:active {
+  transform: scale(1);
 }
 </style>

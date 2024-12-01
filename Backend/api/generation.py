@@ -17,6 +17,11 @@ def generate():
         data = request.get_json()
         query = data.get("query", "What is the purpose of this document?")
         
+        # inputs = {"question": query}
+        # prompt_template = get_prompt_template("refine_query")
+        # query = run_chain(prompt_template, inputs)
+        # print(query)
+
         results = retriever.get_relevant_documents(query)
         context = format_docs(results)
         
@@ -27,7 +32,7 @@ def generate():
         prompt_template = get_prompt_template("generation")
         answer = run_chain(prompt_template, inputs)
         
-        return jsonify({"query": query, "answer": answer})
+        return jsonify({"query": query, "response": answer})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
