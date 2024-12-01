@@ -212,68 +212,73 @@ export default {
 };
 </script>
 <style>
-/* Chatbot Toggle Button */
+/* Draggable container */
+.chatbot-container {
+  position: absolute;
+  width: 350px;
+  height: 500px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: "Roboto", sans-serif;
+  cursor: grab;
+  z-index: 1200;
+}
+
+.chatbot-container:active {
+  cursor: grabbing;
+}
+
+.expanded {
+  width: 600px;
+  height: 650px;
+}
+
+/* Toggle button styling */
 .chatbot-toggle-btn {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  width: 60px;
-  height: 60px;
-  background-color: #007bff;
+  background-color: #004f9e;
   color: white;
   border: none;
+  padding: 15px;
   border-radius: 50%;
-  font-size: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   cursor: pointer;
+  z-index: 1100;
+  transition: background-color 0.3s ease;
 }
 
-/* Chatbot Container */
-.chatbot-container {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 350px;
-  height: 500px;
-  background-color: white;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
-  z-index: 1000;
-  overflow: hidden;
+.chatbot-toggle-btn:hover {
+  background-color: #003d7b;
 }
 
-.chatbot-container.expanded {
-  width: 90%;
-  height: 90%;
-}
-
-/* Header Section */
+/* Header styling */
 .chatbot-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: #007bff;
+  padding: 10px 15px;
+  background-color: #004f9e;
   color: white;
-  padding: 10px;
 }
 
 .chatbot-header .logo {
-  height: 40px;
-  width: 40px;
+  width: 35px;
+  height: 35px;
   border-radius: 50%;
-  margin-right: 10px;
 }
 
-.chatbot-title {
-  flex-grow: 1;
-  font-size: 18px;
+.chatbot-header .chatbot-title {
+  flex: 1;
+  font-size: 16px;
+  margin-left: 10px;
   font-weight: bold;
-  margin: 0;
+  color: #ffffff;
 }
 
 .expand-chatbot-btn,
@@ -281,63 +286,119 @@ export default {
   background: none;
   border: none;
   color: white;
+  font-size: 16px;
   cursor: pointer;
-  font-size: 18px;
+  margin-left: 5px;
 }
 
-/* Chat Window Section */
+.expand-chatbot-btn:hover,
+.close-chatbot-btn:hover {
+  color: #00b2ff;
+}
+
+/* Chat window styling */
 .chatbot-window {
   flex: 1;
   padding: 10px;
   overflow-y: auto;
-  background-color: #f9f9f9;
-}
-
-.user-message {
-  text-align: right;
-}
-
-.bot-message {
-  text-align: left;
+  background-color: #f4f7f9;
 }
 
 .message {
-  display: inline-block;
-  margin: 5px 0;
-  padding: 10px;
-  border-radius: 8px;
-  background-color: #e9ecef;
-  max-width: 75%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  max-width: 80%;
+  word-wrap: break-word;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-.user-message .message {
-  background-color: #007bff;
-  color: white;
+.bot-message {
+  background-color: #ebf9ff;
+  color: #333;
+  align-self: flex-start;
 }
 
-/* Input Area Section */
+.user-message {
+  background-color: #cce5ff;
+  color: #333;
+  align-self: flex-end;
+}
+
+/* Input area styling */
 .chatbot-input-area {
   display: flex;
   align-items: center;
   padding: 10px;
-  background-color: #f1f1f1;
   border-top: 1px solid #ddd;
+  background-color: #ffffff;
 }
 
 .input-field {
-  flex: 1;
+  width: 100%;
   padding: 10px;
-  font-size: 16px;
-  border: 1px solid #ddd;
+  border: 1px solid #ccc;
   border-radius: 20px;
-  margin: 0 10px;
-  outline: none;
+  margin-right: 10px;
+  font-size: 14px;
 }
 
-.send-btn,
-.mic-btn {
-  background-color: #007bff;
+.send-btn {
+  background-color: #004f9e;
+  border: none;
+  padding: 10px;
+  border-radius: 50%;
   color: white;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.send-btn:hover {
+  background-color: #003d7b;
+}
+
+/* File Upload */
+.file-upload-wrapper {
+  display: flex;
+  align-items: center;
+  margin-right: 10px;
+}
+
+.file-upload-icon {
+  font-size: 20px;
+  color: #004f9e;
+  cursor: pointer;
+}
+
+.file-name-preview {
+  font-size: 12px;
+  margin-left: 10px;
+  color: #888;
+}
+
+.delete-file-btn {
+  background: none;
+  border: none;
+  color: #ff5c5c;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+.delete-file-btn:hover {
+  color: #d93838;
+}
+
+/* Audio button styling */
+.audio-btn-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 10px;
+  background-color: white;
+}
+
+.audio-btn {
+  background-color: #004f9e;
   border: none;
   border-radius: 50%;
   width: 40px;
@@ -345,116 +406,52 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  font-size: 18px;
-}
-
-.mic-btn {
-  margin-left: 5px;
-}
-
-.mic-btn.active {
-  background-color: #dc3545;
-}
-
-/* File Upload Section */
-.file-upload-wrapper {
-  position: relative;
-}
-
-.file-upload-icon {
-  cursor: pointer;
-  color: #007bff;
-  font-size: 18px;
-}
-
-.file-name-preview {
-  display: flex;
-  align-items: center;
-  background-color: #e9ecef;
-  padding: 5px 10px;
-  border-radius: 10px;
-  margin-left: 10px;
-}
-
-.delete-file-btn {
-  background: none;
-  border: none;
-  color: #dc3545;
-  font-size: 16px;
-  margin-left: 5px;
-  cursor: pointer;
-}
-
-/* Scrollbar Styling */
-.chatbot-window::-webkit-scrollbar {
-  width: 8px;
-}
-
-.chatbot-window::-webkit-scrollbar-thumb {
-  background-color: #007bff;
-  border-radius: 10px;
-}
-
-.chatbot-window::-webkit-scrollbar-track {
-  background-color: #f1f1f1;
-}
-
-/* Transitions and Animations */
-.chatbot-toggle-btn,
-.chatbot-container,
-.send-btn,
-.mic-btn {
-  transition: background-color 0.3s, transform 0.3s;
-}
-.chatbot-toggle-btn {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 60px;
-  height: 60px;
-  background-color: #007bff;
   color: white;
-  border: none;
-  border-radius: 50%;
-  font-size: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  z-index: 1100; /* Ensure it's above other elements */
+  font-size: 20px;
+  transition: background-color 0.3s ease, transform 0.3s ease;
 }
 
-.chatbot-toggle-btn:hover {
-  transform: scale(1.1);
-  background-color: #0056b3; /* Slightly darker blue on hover */
-}
-
-.chatbot-toggle-btn i {
-  font-size: 24px; /* Ensure icon size is visible */
-}
-
-.chatbot-toggle-btn:hover {
+.audio-btn:hover {
+  background-color: #003d7b;
   transform: scale(1.1);
 }
 
-.send-btn:hover,
-.mic-btn:hover {
-  transform: scale(1.2);
+.audio-btn:active {
+  transform: scale(0.95);
+  color: #003d7b;
 }
 
-.slide-enter-active,
-.slide-leave-active {
-  transition: transform 0.3s;
+.audio-btn i {
+  pointer-events: none; /* Prevent the icon from triggering click events */
 }
 
-.slide-enter {
-  transform: translateY(100%);
+.audio-btn-recording {
+  background-color: #ff5c5c;
 }
 
-.slide-leave-to {
-  transform: translateY(100%);
+.audio-btn-recording:hover {
+  background-color: #d93838;
 }
+
+.audio-btn-recording:active {
+  transform: scale(1);
+}
+
+/* Optional: Add a small label to explain the button */
+.audio-btn-label {
+  font-size: 12px;
+  color: white;
+  margin-top: 5px;
+  display: none; /* You can toggle this label when needed */
+}
+
+.audio-btn-wrapper:hover .audio-btn-label {
+  display: block;
+}
+/* Additions to the existing CSS */
+
+
+
 
 </style>
