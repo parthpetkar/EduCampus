@@ -78,7 +78,6 @@
     </transition>
   </div>
 </template>
-
 <script>
 import axios from "axios";
 
@@ -97,10 +96,8 @@ export default {
       dragging: false,
       dragStart: { x: 0, y: 0 },
       isRecording: false, // Track recording state
-      mediaRecorder: null, // MediaRecorder instance
+      recognition: null, // Speech recognition instance
       audioChunks: [], // Store audio chunks
-      audioBlob: null, // Store the final audio blob
-      audioUrl: null, // Audio URL for playback
     };
   },
 
@@ -147,96 +144,62 @@ export default {
 
     toggleRecording() {
       if (this.isRecording) {
-        // Stop recording
-        this.mediaRecorder.stop();
+        if (this.recognition) {
+          this.recognition.stop();
+        }
         this.isRecording = false;
       } else {
-        // Start recording
-        this.startRecording();
+        this.startVoiceRecognition();
         this.isRecording = true;
       }
     },
 
-    async startRecording() {
-      try {
-        // Request microphone access
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-        // Create MediaRecorder instance
-        this.mediaRecorder = new MediaRecorder(stream);
-
-        // Event listener to capture audio chunks
-        this.mediaRecorder.ondataavailable = (event) => {
-          this.audioChunks.push(event.data);
-        };
-
-        // When recording stops, create the audio blob
-        this.mediaRecorder.onstop = () => {
-          this.audioBlob = new Blob(this.audioChunks, { type: "audio/mp3" });
-          this.audioUrl = URL.createObjectURL(this.audioBlob);
-          this.audioChunks = []; // Reset for next recording
-          this.file = new File([this.audioBlob], "recording.mp3", { type: "audio/mp3" });
-          this.fileName = "recording.mp3";
-        };
-
-        this.mediaRecorder.start();
-      } catch (error) {
-        console.error("Error accessing microphone:", error);
+    async startVoiceRecognition() {
+      if (!("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
+        alert("Voice recognition is not supported in your browser.");
+        return;
       }
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      this.recognition = new SpeechRecognition();
+      this.recognition.lang = "en-US";
+      this.recognition.interimResults = false;
+
+      this.recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        this.userInput += transcript; // Add transcribed text to userInput
+      };
+
+      this.recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+      };
+
+      this.recognition.onend = () => {
+        this.isRecording = false;
+      };
+
+      this.recognition.start();
     },
-    async sendRecording() {
-  if (this.audioBlob) {
-    const formData = new FormData();
-    formData.append("audio", this.audioBlob, "recording.mp3");
-
-    try {
-      const response = await axios.post("http://localhost:5000/api/upload_audio", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data"
-        }
-      });
-
-      // Handle successful response (e.g., display a confirmation message)
-      console.log("Audio uploaded successfully", response.data);
-    } catch (error) {
-      console.error("Error uploading audio:", error);
-    }
-  }
-},
     async sendMessage() {
       if (this.userInput.trim() !== "" || this.file) {
         const formData = new FormData();
         formData.append("query", this.userInput.trim());
-        formData.append("file", this.file || null);
+        if (this.file) formData.append("file", this.file);
 
         this.messages.push({ text: this.userInput, type: "user" });
         this.userInput = "";
-        this.file = null; // Reset file input
-        this.fileName = null; // Reset file name
-
-        this.$nextTick(() => {
-          const chatWindow = this.$refs.chatWindow;
-          chatWindow.scrollTop = chatWindow.scrollHeight;
-        });
+        this.file = null;
+        this.fileName = null;
 
         try {
           const response = await axios.post("http://localhost:5000/api/query", formData, {
             headers: { "Content-Type": "multipart/form-data" },
           });
 
-          const botResponse = this.formatBotResponse(response.data.response);
-          this.messages.push({ text: botResponse, type: "bot" });
-
-          this.$nextTick(() => {
-            const chatWindow = this.$refs.chatWindow;
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-          });
+          this.messages.push({ text: response.data.response, type: "bot" });
         } catch (error) {
-          console.error("Error fetching bot response:", error);
-          this.messages.push({
-            text: "There was an error processing your request.",
-            type: "bot",
-          });
+          console.error("Error sending message:", error);
+          this.messages.push({ text: "Sorry, an error occurred.", type: "bot" });
         }
       }
     },
@@ -244,100 +207,72 @@ export default {
     messageClass(type) {
       return type === "user" ? "user-message" : "bot-message";
     },
-
-    formatBotResponse(botResponse) {
-      const pattern = /"answer":\s*"(.*?)"/s;
-      const match = pattern.exec(botResponse);
-      if (match) {
-        let formattedText = match[1];
-        formattedText = formattedText.replace(/\\n/g, "\n").replace(/\\"/g, '"');
-        formattedText = formattedText.replace(/^Details:\s*/, "");
-        formattedText = formattedText
-          .replace(/\b(?:https?|ftp):\/\/[^\s/$.?#].[^\s]*\b/g, (url) => {
-            return `<button class="text-button" onclick="window.open('${url}', '_blank')">${url}</button>`;
-          })
-          .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, (email) => {
-            return `<span class="highlight">${email}</span>`;
-          })
-          .replace(/\b\d{2,3}\s?[-]?\s?\d{4}\s?[-]?\s?\d{4,5}\b/g, (phone) => {
-            return `<span class="highlight">${phone}</span>`;
-          });
-        return formattedText;
-      }
-      return botResponse;
-    },
   },
 };
 </script>
-
 <style>
-/* Draggable container */
-.chatbot-container {
-  position: absolute;
-  width: 350px;
-  height: 500px;
-  background-color: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  font-family: "Roboto", sans-serif;
-  cursor: grab;
-  z-index: 1200;
-}
-
-.chatbot-container:active {
-  cursor: grabbing;
-}
-
-.expanded {
-  width: 600px;
-  height: 650px;
-}
-
-/* Toggle button styling */
+/* Chatbot Toggle Button */
 .chatbot-toggle-btn {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background-color: #004f9e;
+  width: 60px;
+  height: 60px;
+  background-color: #007bff;
   color: white;
   border: none;
-  padding: 15px;
   border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  z-index: 1100;
-  transition: background-color 0.3s ease;
 }
 
-.chatbot-toggle-btn:hover {
-  background-color: #003d7b;
+/* Chatbot Container */
+.chatbot-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 350px;
+  height: 500px;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  overflow: hidden;
 }
 
-/* Header styling */
+.chatbot-container.expanded {
+  width: 90%;
+  height: 90%;
+}
+
+/* Header Section */
 .chatbot-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 15px;
-  background-color: #004f9e;
+  background-color: #007bff;
   color: white;
+  padding: 10px;
 }
 
 .chatbot-header .logo {
-  width: 35px;
-  height: 35px;
+  height: 40px;
+  width: 40px;
   border-radius: 50%;
+  margin-right: 10px;
 }
 
-.chatbot-header .chatbot-title {
-  flex: 1;
-  font-size: 16px;
-  margin-left: 10px;
+.chatbot-title {
+  flex-grow: 1;
+  font-size: 18px;
   font-weight: bold;
-  color: #ffffff;
+  margin: 0;
 }
 
 .expand-chatbot-btn,
@@ -345,118 +280,63 @@ export default {
   background: none;
   border: none;
   color: white;
-  font-size: 16px;
   cursor: pointer;
-  margin-left: 5px;
+  font-size: 18px;
 }
 
-.expand-chatbot-btn:hover,
-.close-chatbot-btn:hover {
-  color: #00b2ff;
-}
-
-/* Chat window styling */
+/* Chat Window Section */
 .chatbot-window {
   flex: 1;
   padding: 10px;
   overflow-y: auto;
-  background-color: #f4f7f9;
-}
-
-.message {
-  padding: 8px 12px;
-  border-radius: 12px;
-  margin-bottom: 10px;
-  max-width: 80%;
-  word-wrap: break-word;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-.bot-message {
-  background-color: #ebf9ff;
-  color: #333;
-  align-self: flex-start;
+  background-color: #f9f9f9;
 }
 
 .user-message {
-  background-color: #cce5ff;
-  color: #333;
-  align-self: flex-end;
+  text-align: right;
 }
 
-/* Input area styling */
+.bot-message {
+  text-align: left;
+}
+
+.message {
+  display: inline-block;
+  margin: 5px 0;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #e9ecef;
+  max-width: 75%;
+}
+
+.user-message .message {
+  background-color: #007bff;
+  color: white;
+}
+
+/* Input Area Section */
 .chatbot-input-area {
   display: flex;
   align-items: center;
   padding: 10px;
+  background-color: #f1f1f1;
   border-top: 1px solid #ddd;
-  background-color: #ffffff;
 }
 
 .input-field {
-  width: 100%;
+  flex: 1;
   padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 20px;
-  margin-right: 10px;
-  font-size: 14px;
-}
-
-.send-btn {
-  background-color: #004f9e;
-  border: none;
-  padding: 10px;
-  border-radius: 50%;
-  color: white;
-  cursor: pointer;
   font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  margin: 0 10px;
+  outline: none;
 }
 
-.send-btn:hover {
-  background-color: #003d7b;
-}
-
-/* File Upload */
-.file-upload-wrapper {
-  display: flex;
-  align-items: center;
-  margin-right: 10px;
-}
-
-.file-upload-icon {
-  font-size: 20px;
-  color: #004f9e;
-  cursor: pointer;
-}
-
-.file-name-preview {
-  font-size: 12px;
-  margin-left: 10px;
-  color: #888;
-}
-
-.delete-file-btn {
-  background: none;
-  border: none;
-  color: #ff5c5c;
-  cursor: pointer;
-  margin-left: 5px;
-}
-
-.delete-file-btn:hover {
-  color: #d93838;
-}
-
-/* Audio button styling */
-.audio-btn-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: 10px;
-}
-
-.audio-btn {
-  background-color: #004f9e;
+.send-btn,
+.mic-btn {
+  background-color: #007bff;
+  color: white;
   border: none;
   border-radius: 50%;
   width: 40px;
@@ -464,47 +344,116 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
   cursor: pointer;
-  font-size: 20px;
-  transition: background-color 0.3s ease, transform 0.3s ease;
+  font-size: 18px;
 }
 
-.audio-btn:hover {
-  background-color: #003d7b;
+.mic-btn {
+  margin-left: 5px;
+}
+
+.mic-btn.active {
+  background-color: #dc3545;
+}
+
+/* File Upload Section */
+.file-upload-wrapper {
+  position: relative;
+}
+
+.file-upload-icon {
+  cursor: pointer;
+  color: #007bff;
+  font-size: 18px;
+}
+
+.file-name-preview {
+  display: flex;
+  align-items: center;
+  background-color: #e9ecef;
+  padding: 5px 10px;
+  border-radius: 10px;
+  margin-left: 10px;
+}
+
+.delete-file-btn {
+  background: none;
+  border: none;
+  color: #dc3545;
+  font-size: 16px;
+  margin-left: 5px;
+  cursor: pointer;
+}
+
+/* Scrollbar Styling */
+.chatbot-window::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chatbot-window::-webkit-scrollbar-thumb {
+  background-color: #007bff;
+  border-radius: 10px;
+}
+
+.chatbot-window::-webkit-scrollbar-track {
+  background-color: #f1f1f1;
+}
+
+/* Transitions and Animations */
+.chatbot-toggle-btn,
+.chatbot-container,
+.send-btn,
+.mic-btn {
+  transition: background-color 0.3s, transform 0.3s;
+}
+.chatbot-toggle-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  z-index: 1100; /* Ensure it's above other elements */
+}
+
+.chatbot-toggle-btn:hover {
+  transform: scale(1.1);
+  background-color: #0056b3; /* Slightly darker blue on hover */
+}
+
+.chatbot-toggle-btn i {
+  font-size: 24px; /* Ensure icon size is visible */
+}
+
+.chatbot-toggle-btn:hover {
   transform: scale(1.1);
 }
 
-.audio-btn:active {
-  transform: scale(0.95);
+.send-btn:hover,
+.mic-btn:hover {
+  transform: scale(1.2);
 }
 
-.audio-btn i {
-  pointer-events: none; /* Prevent the icon from triggering click events */
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.3s;
 }
 
-.audio-btn-recording {
-  background-color: #ff5c5c;
+.slide-enter {
+  transform: translateY(100%);
 }
 
-.audio-btn-recording:hover {
-  background-color: #d93838;
-}
-
-.audio-btn-recording:active {
-  transform: scale(1);
-}
-
-/* Optional: Add a small label to explain the button */
-.audio-btn-label {
-  font-size: 12px;
-  color: #777;
-  margin-top: 5px;
-  display: none; /* You can toggle this label when needed */
-}
-
-.audio-btn-wrapper:hover .audio-btn-label {
-  display: block;
+.slide-leave-to {
+  transform: translateY(100%);
 }
 
 </style>
