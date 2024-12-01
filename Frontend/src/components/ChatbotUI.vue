@@ -55,6 +55,11 @@
             </span>
           </div>
 
+          <!-- Microphone Button -->
+          <button @click="toggleRecording" class="mic-btn">
+            <i :class="isRecording ? 'fas fa-microphone-slash' : 'fas fa-microphone'"></i>
+          </button>
+
           <!-- Text Input -->
           <input
             type="text"
@@ -73,6 +78,7 @@
     </transition>
   </div>
 </template>
+
 <script>
 import axios from "axios";
 
@@ -90,15 +96,23 @@ export default {
       position: { x: 20, y: 20 }, // Initial draggable position
       dragging: false,
       dragStart: { x: 0, y: 0 },
+      isRecording: false, // Track recording state
+      mediaRecorder: null, // MediaRecorder instance
+      audioChunks: [], // Store audio chunks
+      audioBlob: null, // Store the final audio blob
+      audioUrl: null, // Audio URL for playback
     };
   },
+
   methods: {
     toggleChatbot() {
       this.isChatbotOpen = !this.isChatbotOpen;
     },
+
     toggleExpand() {
       this.isExpanded = !this.isExpanded;
     },
+
     startDrag(event) {
       this.dragging = true;
       this.dragStart = {
@@ -106,15 +120,18 @@ export default {
         y: event.clientY - this.position.y,
       };
     },
+
     onDrag(event) {
       if (this.dragging) {
         this.position.x = event.clientX - this.dragStart.x;
         this.position.y = event.clientY - this.dragStart.y;
       }
     },
+
     stopDrag() {
       this.dragging = false;
     },
+
     handleFileUpload(event) {
       const uploadedFile = event.target.files[0];
       if (uploadedFile) {
@@ -122,10 +139,70 @@ export default {
         this.fileName = uploadedFile.name;
       }
     },
+
     deleteFile() {
       this.file = null;
       this.fileName = null;
     },
+
+    toggleRecording() {
+      if (this.isRecording) {
+        // Stop recording
+        this.mediaRecorder.stop();
+        this.isRecording = false;
+      } else {
+        // Start recording
+        this.startRecording();
+        this.isRecording = true;
+      }
+    },
+
+    async startRecording() {
+      try {
+        // Request microphone access
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        // Create MediaRecorder instance
+        this.mediaRecorder = new MediaRecorder(stream);
+
+        // Event listener to capture audio chunks
+        this.mediaRecorder.ondataavailable = (event) => {
+          this.audioChunks.push(event.data);
+        };
+
+        // When recording stops, create the audio blob
+        this.mediaRecorder.onstop = () => {
+          this.audioBlob = new Blob(this.audioChunks, { type: "audio/mp3" });
+          this.audioUrl = URL.createObjectURL(this.audioBlob);
+          this.audioChunks = []; // Reset for next recording
+          this.file = new File([this.audioBlob], "recording.mp3", { type: "audio/mp3" });
+          this.fileName = "recording.mp3";
+        };
+
+        this.mediaRecorder.start();
+      } catch (error) {
+        console.error("Error accessing microphone:", error);
+      }
+    },
+    async sendRecording() {
+  if (this.audioBlob) {
+    const formData = new FormData();
+    formData.append("audio", this.audioBlob, "recording.mp3");
+
+    try {
+      const response = await axios.post("http://localhost:5000/api/upload-audio", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
+      });
+
+      // Handle successful response (e.g., display a confirmation message)
+      console.log("Audio uploaded successfully", response.data);
+    } catch (error) {
+      console.error("Error uploading audio:", error);
+    }
+  }
+},
     async sendMessage() {
       if (this.userInput.trim() !== "" || this.file) {
         const formData = new FormData();
@@ -163,9 +240,11 @@ export default {
         }
       }
     },
+
     messageClass(type) {
       return type === "user" ? "user-message" : "bot-message";
     },
+
     formatBotResponse(botResponse) {
       const pattern = /"answer":\s*"(.*?)"/s;
       const match = pattern.exec(botResponse);
@@ -190,6 +269,7 @@ export default {
   },
 };
 </script>
+
 <style>
 /* Draggable container */
 .chatbot-container {
@@ -365,6 +445,66 @@ export default {
 
 .delete-file-btn:hover {
   color: #d93838;
+}
+
+/* Audio button styling */
+.audio-btn-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 10px;
+}
+
+.audio-btn {
+  background-color: #004f9e;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  font-size: 20px;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.audio-btn:hover {
+  background-color: #003d7b;
+  transform: scale(1.1);
+}
+
+.audio-btn:active {
+  transform: scale(0.95);
+}
+
+.audio-btn i {
+  pointer-events: none; /* Prevent the icon from triggering click events */
+}
+
+.audio-btn-recording {
+  background-color: #ff5c5c;
+}
+
+.audio-btn-recording:hover {
+  background-color: #d93838;
+}
+
+.audio-btn-recording:active {
+  transform: scale(1);
+}
+
+/* Optional: Add a small label to explain the button */
+.audio-btn-label {
+  font-size: 12px;
+  color: #777;
+  margin-top: 5px;
+  display: none; /* You can toggle this label when needed */
+}
+
+.audio-btn-wrapper:hover .audio-btn-label {
+  display: block;
 }
 
 </style>
