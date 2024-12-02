@@ -82,3 +82,7 @@ def audio():
 
 if __name__ == "__main__":
     app.run(debug=config.DEBUG)
+
+# python -m venv myenv   
+# ./myenv 
+#./myenv/Scripts/activate
