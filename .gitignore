@@ -4,9 +4,7 @@ myenv
 .env
 .env-local
 __pycache__
-/data/
 uploads
-Backend/data/
 .DS_Store
 node_modules
 /dist
