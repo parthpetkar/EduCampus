@@ -49,15 +49,16 @@ To set up EduCampus locally, follow these steps:
     npm install
     npm run serve
     ```
-4. Set up environmental variables
+4. **Set up environmental variables**:
+   
    Use .env.example
    
-5. **Set up database**:
+6. **Set up database**:
     ```sh
     # Run the file ingest.py
     python ingest.py
     ```
-6. **Run the Docker container**:
+7. **Run the Docker container**:
     ```sh
     docker-compose up --build
     ```
