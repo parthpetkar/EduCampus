@@ -7,15 +7,9 @@
 
     <!-- Chatbot Panel -->
     <transition name="slide">
-      <div
-        v-if="isChatbotOpen"
-        :class="['chatbot-container', { expanded: isExpanded }]"
-        @mousedown="startDrag"
-        @mousemove="onDrag"
-        @mouseup="stopDrag"
-        @mouseleave="stopDrag"
-        :style="{ top: `${position.y}px`, left: `${position.x}px` }"
-      >
+      <div v-if="isChatbotOpen" :class="['chatbot-container', { expanded: isExpanded }]" @mousedown="startDrag"
+        @mousemove="onDrag" @mouseup="stopDrag" @mouseleave="stopDrag"
+        :style="{ top: `${position.y}px`, left: `${position.x}px` }">
         <!-- Header Section -->
         <div class="chatbot-header">
           <img src="@/assets/image1.png" alt="Institution Logo" class="logo" />
@@ -34,11 +28,7 @@
 
         <!-- Chat Window Section -->
         <div class="chatbot-window" ref="chatWindow">
-          <div
-            v-for="(message, index) in messages"
-            :key="index"
-            :class="messageClass(message.type)"
-          >
+          <div v-for="(message, index) in messages" :key="index" :class="messageClass(message.type)">
             <div class="message" v-html="message.text"></div>
           </div>
         </div>
@@ -65,13 +55,8 @@
           </button>
 
           <!-- Text Input -->
-          <input
-            type="text"
-            v-model="userInput"
-            @keydown.enter="sendMessage"
-            placeholder="Type your question here..."
-            class="input-field"
-          />
+          <input type="text" v-model="userInput" @keydown.enter="sendMessage" placeholder="Type your question here..."
+            class="input-field" />
 
           <!-- Send Button -->
           <button @click="sendMessage" class="send-btn">
@@ -211,47 +196,47 @@ export default {
     // },
 
     async sendMessage() {
-    if (this.userInput.trim() !== "" || this.file) {
-      const formData = new FormData();
-      formData.append("query", this.userInput.trim());
-      if (this.file) formData.append("file", this.file);
+      if (this.userInput.trim() !== "" || this.file) {
+        const formData = new FormData();
+        formData.append("query", this.userInput.trim());
+        if (this.file) formData.append("file", this.file);
 
-      this.messages.push({ text: this.userInput, type: "user" });
-      this.userInput = "";
+        this.messages.push({ text: this.userInput, type: "user" });
+        this.userInput = "";
 
-      try {
-        const response = await axios.post("http://localhost:5000/api/query", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        try {
+          const response = await axios.post("http://localhost:5000/api/query", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          console.log(response)
+          const botResponse = this.formatBotResponse(response.data.response);
+          this.messages.push({ text: botResponse, type: "bot" });
 
-        const botResponse = this.formatBotResponse(response.data.response);
-        this.messages.push({ text: botResponse, type: "bot" });
+          // Narrate the bot's response
+          // this.narrateText(botResponse);
+          if (this.isNarrationEnabled) {
+            this.narrateText(botResponse);
+          }
 
-        // Narrate the bot's response
-        // this.narrateText(botResponse);
-        if (this.isNarrationEnabled) {
-          this.narrateText(botResponse);
+        } catch (error) {
+          console.error("Error sending message:", error);
+          const errorMessage = "Sorry, an error occurred.";
+          this.messages.push({ text: errorMessage, type: "bot" });
+
+          // Narrate the error message
+          this.narrateText(errorMessage);
         }
-
-      } catch (error) {
-        console.error("Error sending message:", error);
-        const errorMessage = "Sorry, an error occurred.";
-        this.messages.push({ text: errorMessage, type: "bot" });
-
-        // Narrate the error message
-        this.narrateText(errorMessage);
       }
-    }
-  },
+    },
 
-  toggleNarration() {
-    this.isNarrationEnabled = !this.isNarrationEnabled;
+    toggleNarration() {
+      this.isNarrationEnabled = !this.isNarrationEnabled;
 
-    // Stop any ongoing narration immediately
-    if (!this.isNarrationEnabled) {
-      window.speechSynthesis.cancel();
-    }
-  },
+      // Stop any ongoing narration immediately
+      if (!this.isNarrationEnabled) {
+        window.speechSynthesis.cancel();
+      }
+    },
 
 
     messageClass(type) {
@@ -263,41 +248,74 @@ export default {
       const match = pattern.exec(botResponse);
       if (match) {
         let formattedText = match[1];
-        formattedText = formattedText.replace(/\\n/g, "\n").replace(/\\"/g, '"');
-        formattedText = formattedText.replace(/^Details:\s*/, "");
+
+        // Decode and clean up escaped characters
         formattedText = formattedText
-          .replace(/\b(?:https?|ftp):\/\/[^\s/$.?#].[^\s]*\b/g, (url) => {
-            return `<button class="text-button" onclick="window.open('${url}', '_blank')">${url}</button>`;
-          })
-          .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, (email) => {
-            return `<span class="highlight">${email}</span>`;
-          })
-          .replace(/\b\d{2,3}\s?[-]?\s?\d{4}\s?[-]?\s?\d{4,5}\b/g, (phone) => {
-            return `<span class="highlight">${phone}</span>`;
-          });
+          .replace(/\\n/g, "\n")
+          .replace(/\\"/g, '"')
+          .replace(/^Details:\s*/, "");
+
+        // Convert URLs to buttons
+        formattedText = formattedText.replace(/\b(?:https?|ftp):\/\/[^\s/$.?#].[^\s]*\b/g, (url) => {
+          const buttonLabel = "Open Link";
+          return `<button class="url-button" onclick="window.open('${url}', '_blank')">${buttonLabel}</button>`;
+        });
+
+        // Highlight emails
+        formattedText = formattedText.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, (email) => {
+          return `<span class="highlight">${email}</span>`;
+        });
+
+        // Format phone numbers with icon
+        formattedText = formattedText.replace(/\b\d{10}\b/g, (phone) => {
+          return `<div class="contact">
+                <span class="contact-icon">📞</span>
+                <span class="contact-number">${phone}</span>
+              </div>`;
+        });
+
+        // Convert points (lines starting with ">") into a list
+        if (formattedText.includes(">")) {
+          const listItems = formattedText
+            .split("\n")
+            .map((line) => {
+              if (line.trim().startsWith(">")) {
+                return `<li>${line.trim().substring(1).trim()}</li>`;
+              }
+              return line; // Keep other lines as they are
+            })
+            .join("\n");
+
+          formattedText = `<ul>${listItems}</ul>`;
+        }
+
+        // Ensure decimal points are interpreted correctly
+        formattedText = formattedText.replace(/(\d+)\.(\d+)/g, "$1.$2");
+
         return formattedText;
       }
       return botResponse;
     },
 
+
     narrateText(text) {
-    if (!("speechSynthesis" in window)) {
-      console.warn("Speech synthesis not supported in this browser.");
-      return;
-    }
+      if (!("speechSynthesis" in window)) {
+        console.warn("Speech synthesis not supported in this browser.");
+        return;
+      }
 
-    // Cancel any ongoing narration
-    window.speechSynthesis.cancel();
+      // Cancel any ongoing narration
+      window.speechSynthesis.cancel();
 
-    if (this.isNarrationEnabled) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-US"; // Set language
-      utterance.rate = 1;       // Adjust speed (1 is normal speed)
-      utterance.pitch = 1;      // Adjust pitch (1 is normal pitch)
+      if (this.isNarrationEnabled) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "en-US"; // Set language
+        utterance.rate = 1;       // Adjust speed (1 is normal speed)
+        utterance.pitch = 1;      // Adjust pitch (1 is normal pitch)
 
-      window.speechSynthesis.speak(utterance);
-    }
-  },
+        window.speechSynthesis.speak(utterance);
+      }
+    },
   },
 };
 </script>
@@ -407,12 +425,16 @@ export default {
   background-color: #ebf9ff;
   color: #333;
   align-self: flex-start;
+  text-align: left;
+  /* Ensures text is left-aligned */
 }
 
 .user-message {
   background-color: #cce5ff;
   color: #333;
   align-self: flex-end;
+  text-align: right;
+  /* Ensures text is left-aligned */
 }
 
 /* Input area styling */
@@ -487,7 +509,7 @@ export default {
   background-color: white;
 }
 
-.mic-btn{
+.mic-btn {
   background-color: #004f9e;
   border: none;
   border-radius: 50%;
@@ -513,7 +535,8 @@ export default {
 }
 
 .audio-btn i {
-  pointer-events: none; /* Prevent the icon from triggering click events */
+  pointer-events: none;
+  /* Prevent the icon from triggering click events */
 }
 
 .audio-btn-recording {
@@ -533,12 +556,14 @@ export default {
   font-size: 12px;
   color: white;
   margin-top: 5px;
-  display: none; /* You can toggle this label when needed */
+  display: none;
+  /* You can toggle this label when needed */
 }
 
 .audio-btn-wrapper:hover .audio-btn-label {
   display: block;
 }
+
 /* Additions to the existing CSS */
 
 .toggle-narration-btn {
@@ -549,9 +574,60 @@ export default {
   font-size: 18px;
   margin-left: 8px;
 }
+
 .toggle-narration-btn:hover {
   color: #ffffff;
 }
 
+/* Transparent button for URLs */
+.url-button {
+  background: transparent;
+  border: none;
+  color: blue;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+}
 
+.url-button:hover {
+  text-decoration: none;
+}
+
+.contact {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.contact-icon {
+  margin-right: 8px;
+  color: #e63946;
+  /* Red color for phone icon */
+}
+
+.contact-number {
+  font-size: 14px;
+  color: #333;
+}
+
+
+/* Icons for email and phone */
+.email-icon::before {
+  content: "📧";
+}
+
+.phone-icon::before {
+  content: "📞";
+}
+
+/* List styling */
+ul {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+li {
+  margin: 5px 0;
+}
 </style>

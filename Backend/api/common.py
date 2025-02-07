@@ -48,6 +48,7 @@ def get_prompt_template(use_case):
             3. Your response should be at max 120 words long.
             4. Identify what the user whats to do and always provide a link in the response based on the query.
             5. When a user provides their MHT-CET percentile, compare it with the cutoff percentiles for MHTCET for various branches and inform them whether they are eligible for admission.
+            6. If the user requests steps, guidance for a precedure such as admission then respond in point wise manner. Denote the start of point by '>'.
 
             Response format:
             Details: [Provide a friendly and helpful response based on the context.]

@@ -1,8 +1,0 @@
-venv
-myenv
-.venv
-.env
-.env-local
-__pycache__
-/data/
-uploads
