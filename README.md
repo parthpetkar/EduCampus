@@ -11,6 +11,8 @@ EduCampus is a chatbot platform designed to facilitate online learning and campu
 - [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
+- [Contributors](#contributors)
+
 
 ## Introduction
 EduCampus aims to provide a seamless online education experience through an intelligent chatbot, offering tools for both students and administrators. The platform includes features such as course management, student tracking, online assessments, and more.
